@@ -21,6 +21,17 @@ module Messages
     puts "This is your guess: #{player_guess}"
     new_line()
   end
+
+  def display_letter_match_message(match_logic)
+    if match_logic
+      puts "Letter is a Match! Well done"
+    else puts "No match, unlucky!"
+    end
+  end
+
+  def display_guesses_remaining(number)
+    puts "Guesses remaining: #{number}"
+  end
 end
 
 module LoadIntroFiles
@@ -44,7 +55,7 @@ end
 class Player
   include Messages
 
-  attr_accessor :player_guess_letters
+  attr_accessor :player_guess_letters, :letter_match
 
   def initialize()
     puts ask_player_name()
@@ -66,19 +77,27 @@ class Player
       @player_guess_one_letter = gets.chomp.upcase
       if @player_guess_one_letter.length == 1 && @player_guess_one_letter =~ /[A-Za-z]/
         @picked_letter = true
+        # add to guessed letter array. If same letter picked give message. 
       end
     end
+    #break into further methods
+    @letter_match = false
     word_answer_array.each_with_index do |letter_answer, index_answer|
       if letter_answer == @player_guess_one_letter
         player_guess_letters[index_answer] = letter_answer
+        @letter_match = true
       end
     end
-    # add interactivity for player to get message if no match. 
+    display_letter_match_message(letter_match)
     display_player_guess(player_guess_letters)
   end
 
   def return_player_guess
     player_guess_letters
+  end
+
+  def return_check_letter_match
+    letter_match
   end
 end
 
@@ -98,7 +117,7 @@ class ComputerPlayer
 end
 
 class Game
-  include LoadIntroFiles
+  include LoadIntroFiles, Messages
 
   attr_reader :player, :computer_player, :computer_word_guess, :computer_word_guess_array
 
@@ -127,22 +146,28 @@ class Game
     @win
   end
 
-  @@count_guess = 10
+  def number_guesses
+    @max_guesses = 10
+    @@count_guess = @max_guesses
+    if @@count_guess == @max_guesses then display_guesses_remaining(@max_guesses) end
+  end
+
   def player_turn(computer_word_guess, computer_word_guess_array)
     player.player_guess_display_letters(computer_word_guess)
+    number_guesses()
     until @@count_guess == 0 || check_win()
       player.player_guess(computer_word_guess_array)
-      @@count_guess -= 1
-      puts "Guesses remaining: #{@@count_guess}"
+      if !(player.return_check_letter_match) then @@count_guess -= 1 end
+      display_guesses_remaining(@@count_guess)
     end
     game_end()
   end
 
   def game_end
-    if @@count_guess == 0
-      puts "You Lose"
-    elsif @win
+    if check_win()
       puts "You Win!"
+    elsif @@count_guess == 0
+      puts "You Lose, Better Luck Next Time"
     end 
   end
 end
