@@ -90,13 +90,17 @@ module SaveLoadProgress
     end
     puts "This is the list of all files. Pick a file to load."
     puts @display_saved_files
-    # puts files_hash
     pick_file(files_hash)
   end
 
-  def deserialise(game_clases)
-    YAML::load(game_clases)
-    #deserialise specific variables
+  def deserialise(file_string)
+    new_load_file = YAML.safe_load(file_string)
+    @random_word = new_load_file["random_word"]
+    @random_word_array = new_load_file["random_word_array"]
+    @player_guess_letters = new_load_file[:player_guess_letters]
+    @player_letter_choices = new_load_file[:player_letter_choices]
+    # @@count_guess = new_load_file[:count_guess]
+
   end
 
   def pick_file(files)
@@ -110,27 +114,37 @@ module SaveLoadProgress
         end
       end
     end
-    filename = files.key(load_file_number)
-    puts "#{filename}"
-    from_yaml = filename.read #read error here
-    deserialise(from_yaml)
+    load_file = files.key(load_file_number)
+    puts "#{load_file} has been selected."
+    File.open("./saves/#{load_file}", "r") do |file|
+      deserialise(file)
+    end
+    puts "#{load_file} saved progress has been loaded."
   end
 
-  def serialise
-    YAML::dump(self)
-    #now serialise specific variables I want from game class. See game attributes. 
+  def serialise(filename)
+    YAML.dump ({
+      :name => player.return_name,
+      :random_word => random_word,
+      :random_word_array => random_word_array,
+      :player_guess_letters => player_guess_letters,
+      :player_letter_choices => player_letter_choices,
+      # :count_guess => @@count_guess
+    })
+    if filename.empty?
+      puts "empty"
+    else puts "not empty"
+    end
+   puts "File has been saved as #{filename}"
   end
 
   def save_game()
     # Dir.mkdir('saves') unless Dir.exists?('saves')
-    #need to give user option to create name and save. 
     puts "Enter filename to save:"
     save_filename = gets.chomp
-    
     File.open("./saves/#{save_filename}.yaml", "w") do |file|
-      file.serialise
+      file.write serialise(save_filename) #not working, serialiser is empty
     end
-    
     # load to start menu.
   end
 end
