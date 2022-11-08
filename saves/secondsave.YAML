@@ -1,0 +1,31 @@
+---
+:name: David
+:random_word: 'INCOMING
+
+  '
+:random_word_array:
+- I
+- N
+- C
+- O
+- M
+- I
+- N
+- G
+- "\n"
+:player_guess_letters:
+- I
+- _
+- _
+- O
+- _
+- I
+- _
+- _
+:player_letter_choices:
+- A
+- E
+- I
+- O
+- P
+:lives: 7

@@ -13,10 +13,12 @@ module Messages
     puts "----------------------------------------------"
   end
 
-  def greeting(player)
+  def greeting(name = "Player")
+    seperator_line()
     new_line()
-    puts "Welcome #{player} to Hangman!"
+    puts "Welcome #{name} to Hangman!"
     new_line()
+    seperator_line()
   end
 
   def pick_letter
@@ -50,13 +52,34 @@ module Messages
   def display_restart_game_option
     new_line()
     seperator_line()
-    puts "Please type 'R' to restart the game, or 'N' to end the game."
+    puts "Please type 'R' to load or start new game, or 'N' to exit."
   end
 
   def end_game_message(name)
     seperator_line()
     new_line()
     puts "Thank you #{name} for playing Hangman!"
+    new_line()
+    seperator_line()
+  end
+
+  def win_message
+    new_line()
+    puts "You Win!"
+    new_line()
+  end
+
+  def lost_game_message
+    new_line()
+    puts "You Lost, the hidden word was #{random_word}"
+    new_line()
+    puts "Better Luck Next Time!"
+  end
+
+  def welcome_back(name)
+    seperator_line()
+    new_line()
+    puts "Welcome back #{name} to Hangman!"
     new_line()
     seperator_line()
   end
@@ -94,13 +117,13 @@ module SaveLoadProgress
   end
 
   def deserialise(file_string)
-    new_load_file = YAML.safe_load(file_string)
-    @random_word = new_load_file["random_word"]
-    @random_word_array = new_load_file["random_word_array"]
+    new_load_file = YAML.load(file_string)
+    @name = new_load_file[:name]
+    @random_word = new_load_file[:random_word]
+    @random_word_array = new_load_file[:random_word_array]
     @player_guess_letters = new_load_file[:player_guess_letters]
     @player_letter_choices = new_load_file[:player_letter_choices]
-    # @@count_guess = new_load_file[:count_guess]
-
+    @lives = new_load_file[:lives]
   end
 
   def pick_file(files)
@@ -115,37 +138,33 @@ module SaveLoadProgress
       end
     end
     load_file = files.key(load_file_number)
-    puts "#{load_file} has been selected."
     File.open("./saves/#{load_file}", "r") do |file|
       deserialise(file)
     end
-    puts "#{load_file} saved progress has been loaded."
+    new_line()
+    puts "[#{load_file_number}] #{load_file} saved progress has been loaded..."
   end
 
-  def serialise(filename)
+  def serialise()
     YAML.dump ({
       :name => player.return_name,
-      :random_word => random_word,
-      :random_word_array => random_word_array,
-      :player_guess_letters => player_guess_letters,
-      :player_letter_choices => player_letter_choices,
-      # :count_guess => @@count_guess
+      :random_word => @random_word,
+      :random_word_array => @random_word_array,
+      :player_guess_letters => @player_guess_letters,
+      :player_letter_choices => @player_letter_choices,
+      :lives => @lives
     })
-    if filename.empty?
-      puts "empty"
-    else puts "not empty"
-    end
-   puts "File has been saved as #{filename}"
   end
 
   def save_game()
-    # Dir.mkdir('saves') unless Dir.exists?('saves')
+    new_line()
     puts "Enter filename to save:"
     save_filename = gets.chomp
-    File.open("./saves/#{save_filename}.yaml", "w") do |file|
-      file.write serialise(save_filename) #not working, serialiser is empty
+    File.open("./saves/#{save_filename}.YAML", "w") do |file|
+      file.write(serialise())
     end
-    # load to start menu.
+    new_line()
+   puts "File has been saved as '#{save_filename}'"
   end
 end
 
@@ -182,7 +201,7 @@ class Game
   attr_reader :player, :random_word, :random_word_array, :player_guess_letters, :letter_match, :player_letter_choices, :picked_save
 
   def initialize()
-    @player = Player.new
+    greeting()
     load_game()
   end
 
@@ -195,31 +214,35 @@ class Game
     end
     if @game_option == '1'
       present_files()
+      welcome_back(@name)
+      setup_player_display(@random_word, @game_option)
     elsif @game_option == '2' 
-      new_game()
+      new_game(@game_option)
     end
   end
 
-  def new_game
+  def new_game(option_selected)
+    @player = Player.new
+    @name = player.return_name
     @words_array = load_words_dictionary()
     @random_word = random_word_generator(@words_array)
     @random_word_array = split_word_to_letters(random_word)
-    setup_player_display(@random_word)
+    @lives = 10
+    @player_letter_choices = []
+    setup_player_display(@random_word, option_selected)
   end
 
-  def setup_player_display(word_answer)
+  def setup_player_display(word_answer, option_selected)
     @word_answer_length = word_answer.strip.length
-    @player_guess_letters = Array.new(@word_answer_length).map {|letter| letter = "_" }
+    if option_selected == '2'
+      @player_guess_letters = Array.new(@word_answer_length).map {|letter| letter = "_" }
+    end 
+    
     puts "The word you should guess has #{@word_answer_length} letters. Good Luck!"
     display_player_guess(player_guess_letters)
-    @player_letter_choices = []
+    display_all_guesses(player_letter_choices)
+    display_guesses_remaining(@lives)
     player_turn(@random_word_array)
-  end
-
-  def number_guesses
-    @max_guesses = 10
-    @@count_guess = @max_guesses
-    if @@count_guess == @max_guesses then display_guesses_remaining(@max_guesses) end
   end
 
   def check_win
@@ -265,45 +288,41 @@ class Game
   end
 
   def player_turn(random_word_array)
-    number_guesses()
-    until @@count_guess == 0 || check_win()
+    # if @lives == 10 then display_guesses_remaining(@lives) end
+    until @lives == 0 || check_win()
       player_guess(random_word_array)
       if picked_save
         save_game()
+        restart_game()
         break
       elsif !letter_match
-        @@count_guess -= 1 
-        display_guesses_remaining(@@count_guess)
-      else display_guesses_remaining(@@count_guess)
+        @lives -= 1 
+        display_guesses_remaining(@lives)
+      else display_guesses_remaining(@lives)
       end
     end
-    if @@count_guess == 0 || check_win() then game_end() end
-    #What to do when loading back in? Check number of gueses remaining
+    if @lives == 0 || check_win() then game_end() end
   end
 
   def game_end
     if check_win()
-      new_line()
-      puts "You Win!"
-    elsif @@count_guess == 0
-      new_line()
-      puts "You Lost, the hidden word was #{random_word}"
-      puts "Better Luck Next Time!"
+      win_message()
+    elsif @lives == 0
+      lost_game_message()
     end
-    restart_game() 
+    restart_game()
   end
 
   def restart_game
-    @option_selected = false
-    until @option_selected
+    loop do
       display_restart_game_option()
       @restart_game_choice = gets.chomp.upcase
       if @restart_game_choice == "R"
         initialize()
-        @option_selected = true
+        break
       elsif @restart_game_choice == "N"
-       end_game_message(player.return_name())
-       @option_selected = true
+       end_game_message(@name)
+       break
       end
     end
   end
