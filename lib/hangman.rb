@@ -288,7 +288,6 @@ class Game
   end
 
   def player_turn(random_word_array)
-    # if @lives == 10 then display_guesses_remaining(@lives) end
     until @lives == 0 || check_win()
       player_guess(random_word_array)
       if picked_save
