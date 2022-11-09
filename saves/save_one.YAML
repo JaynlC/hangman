@@ -1,0 +1,39 @@
+---
+:name: Jay
+:random_word: 'FUNCTIONAL
+
+  '
+:random_word_array:
+- F
+- U
+- N
+- C
+- T
+- I
+- O
+- N
+- A
+- L
+- "\n"
+:player_guess_letters:
+- _
+- _
+- N
+- C
+- _
+- I
+- O
+- N
+- A
+- _
+:player_letter_choices:
+- A
+- E
+- N
+- M
+- I
+- O
+- C
+- D
+- R
+:lives: 6

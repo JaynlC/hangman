@@ -1,12 +1,13 @@
 require 'yaml'
 
 module Messages
-  def ask_player_name
-    'Enter your player name:'
-  end
-
   def new_line
     puts "\n"
+  end
+  
+  def ask_player_name
+    new_line()
+    'Enter your player name:'
   end
 
   def seperator_line
@@ -23,7 +24,7 @@ module Messages
 
   def pick_letter
     seperator_line()
-    puts "Pick one letter as your guess to find the word"
+    puts "Pick one letter as your guess to find the word. Or type 'save' to save progress."
   end
 
   def display_player_guess(player_guess)
@@ -83,6 +84,11 @@ module Messages
     new_line()
     seperator_line()
   end
+
+  def no_saved_files_message(user_mode)
+    puts "There are no files to #{user_mode}."
+    new_line()
+  end
 end
 
 module LoadIntroFiles
@@ -104,16 +110,56 @@ module LoadIntroFiles
 end
 
 module SaveLoadProgress
-  def present_files
-    @saved_files = Dir.children('saves')
-    files_hash = {}
-    @display_saved_files = @saved_files.map.with_index do |filename, index|
-      files_hash.store(filename, index + 1)
-      "[#{index + 1}] #{filename}"
+  def check_files_exist()
+    saved_files = Dir.children('saves')
+    files_exist = true
+    if saved_files.empty?
+      files_exist = false
     end
-    puts "This is the list of all files. Pick a file to load."
+    files_exist
+  end
+  
+  def present_files(user_mode = 'view_files')
+    saved_files = Dir.children('saves')
+    files_hash = {}
+    @display_saved_files = saved_files.map.with_index do |filename, index|
+      files_hash.store(filename, index + 1)
+      "[#{index + 1}] #{filename.split(".").first}"
+    end
+    new_line()
+    puts "These are the existing saved files:"
     puts @display_saved_files
-    pick_file(files_hash)
+    unless user_mode == 'view_files' then pick_file(files_hash, user_mode) end
+  end
+
+  def pick_file(files, user_mode)
+    file_selected = false
+    until file_selected
+      puts "Select the file number to #{user_mode}:"
+      load_file_number = gets.chomp.to_i
+      if load_file_number !~ /D/
+        if load_file_number.between?(1, files.values.last)
+          file_selected = true
+        end
+      end
+    end
+    load_or_delete_file = files.key(load_file_number)
+    loop do 
+      if user_mode == 'delete'
+        delete_file(load_or_delete_file)
+        break
+      elsif user_mode == 'load'
+        load_file(load_or_delete_file, load_file_number)
+        break
+      end
+    end
+  end
+
+  def delete_file(delete_file)
+    File.delete("./saves/#{delete_file}")
+    new_line()
+    puts "#{delete_file.split(".").first} has been deleted."
+    new_line()
   end
 
   def deserialise(file_string)
@@ -126,23 +172,12 @@ module SaveLoadProgress
     @lives = new_load_file[:lives]
   end
 
-  def pick_file(files)
-    file_selected = false
-    until file_selected
-      puts "Select the file number you would like to load:"
-      load_file_number = gets.chomp.to_i
-      if load_file_number !~ /D/
-        if load_file_number.between?(1, files.values.last)
-          file_selected = true
-        end
-      end
-    end
-    load_file = files.key(load_file_number)
-    File.open("./saves/#{load_file}", "r") do |file|
+  def load_file(file_to_load, file_number)
+    File.open("./saves/#{file_to_load}", "r") do |file|
       deserialise(file)
     end
     new_line()
-    puts "[#{load_file_number}] #{load_file} saved progress has been loaded..."
+    puts "[#{file_number}] #{file_to_load.split(".").first} saved progress has been loaded..."
   end
 
   def serialise()
@@ -158,13 +193,22 @@ module SaveLoadProgress
 
   def save_game()
     new_line()
-    puts "Enter filename to save:"
-    save_filename = gets.chomp
-    File.open("./saves/#{save_filename}.YAML", "w") do |file|
+    present_files()
+    new_line()
+    puts "Enter new filename to save:"
+    loop do
+      @save_filename = "#{gets.chomp}.YAML"
+      current_saves = Dir.children('saves')
+      if current_saves.include?(@save_filename)
+        puts "This filename exists, please enter new filename:"
+      else break
+      end
+    end
+    File.open("./saves/#{@save_filename}", "w") do |file|
       file.write(serialise())
     end
     new_line()
-   puts "File has been saved as '#{save_filename}'"
+   puts "File has been saved as '#{@save_filename.split(".").first}'"
   end
 end
 
@@ -208,16 +252,29 @@ class Game
   def load_game
     @game_option_selected = false
     until @game_option_selected
-      puts "Select '1' to load saved game, or '2' to start new game"
+      puts "Select '1' to load saved game, '2' to start new game, or '3' to delete a previous saved game:"
       @game_option = gets.chomp.strip
-      if @game_option == '1' || @game_option == '2' then @game_option_selected = true end
-    end
-    if @game_option == '1'
-      present_files()
-      welcome_back(@name)
-      setup_player_display(@random_word, @game_option)
-    elsif @game_option == '2' 
-      new_game(@game_option)
+      if @game_option == '1'
+        @user_mode = 'load'
+        if check_files_exist()
+          present_files(@user_mode)
+          welcome_back(@name)
+          setup_player_display(@random_word, @game_option)
+          @game_option_selected = true
+        else
+          no_saved_files_message(@user_mode)
+        end
+      elsif @game_option == '2'
+        new_game(@game_option)
+        @game_option_selected = true
+      elsif @game_option == '3'
+        @user_mode = 'delete'
+        if check_files_exist()
+          present_files(@user_mode)
+        else 
+          no_saved_files_message(@user_mode)
+        end
+      end
     end
   end
 
@@ -237,7 +294,6 @@ class Game
     if option_selected == '2'
       @player_guess_letters = Array.new(@word_answer_length).map {|letter| letter = "_" }
     end 
-    
     puts "The word you should guess has #{@word_answer_length} letters. Good Luck!"
     display_player_guess(player_guess_letters)
     display_all_guesses(player_letter_choices)
@@ -317,7 +373,7 @@ class Game
       display_restart_game_option()
       @restart_game_choice = gets.chomp.upcase
       if @restart_game_choice == "R"
-        initialize()
+        Game.new
         break
       elsif @restart_game_choice == "N"
        end_game_message(@name)

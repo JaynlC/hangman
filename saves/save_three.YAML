@@ -1,0 +1,27 @@
+---
+:name: Dave
+:random_word: 'CELTIC
+
+  '
+:random_word_array:
+- C
+- E
+- L
+- T
+- I
+- C
+- "\n"
+:player_guess_letters:
+- _
+- E
+- L
+- _
+- _
+- _
+:player_letter_choices:
+- L
+- O
+- E
+- H
+- O
+:lives: 7

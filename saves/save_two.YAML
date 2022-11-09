@@ -1,0 +1,38 @@
+---
+:name: Bob
+:random_word: 'COMPATIBLE
+
+  '
+:random_word_array:
+- C
+- O
+- M
+- P
+- A
+- T
+- I
+- B
+- L
+- E
+- "\n"
+:player_guess_letters:
+- C
+- O
+- M
+- P
+- A
+- _
+- I
+- _
+- L
+- _
+:player_letter_choices:
+- A
+- L
+- M
+- N
+- I
+- O
+- P
+- C
+:lives: 9
